@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"html/template"
 	"net/http"
 	"time"
 
@@ -44,14 +45,17 @@ func newPool(server, password string) *redis.Pool {
 func DashboardHandler(response http.ResponseWriter, request *http.Request) {
 	conn := pool.Get()
 	defer conn.Close()
-	fmt.Fprintf(response, "Welcome to the Dashboard on: %s.", request.URL.Path[1:])
-	fmt.Fprintf(response, "\n\n<br /><br />\n\n")
-
 	timestamp, err := conn.Do("GET", "ap-srv1")
 	if err != nil {
 		fmt.Fprintf(response, "Error retrieving value from redis: %s", err)
 	}
-	fmt.Fprintf(response, "Last Timestamp was: %s.", timestamp)
+	details := struct {
+		Time string
+	}{
+		fmt.Sprintf("%s", timestamp),
+	}
+	t, _ := template.ParseFiles("templates/dashboard.html")
+	t.Execute(response, details)
 }
 
 func main() {
