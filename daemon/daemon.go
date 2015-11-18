@@ -42,10 +42,41 @@ func newPool(server, password string) *redis.Pool {
 	}
 }
 
+func retrieveValue(key string) (reply interface{}, err error) {
+	conn := pool.Get()
+	defer conn.Close()
+
+	count, err := conn.Do("EXISTS", key)
+	if err == nil || count == 0 {
+		return nil, err
+	}
+	value, err := conn.Do("")
+	if err == nil {
+		return nil, err
+	}
+	return value, err
+}
+
 func DashboardHandler(response http.ResponseWriter, request *http.Request) {
 	conn := pool.Get()
 	defer conn.Close()
 	timestamp, err := conn.Do("GET", "ap-srv1")
+	if err != nil {
+		fmt.Fprintf(response, "Error retrieving value from redis: %s", err)
+	}
+	details := struct {
+		Time string
+	}{
+		fmt.Sprintf("%s", timestamp),
+	}
+	t, _ := template.ParseFiles("templates/dashboard.html")
+	t.Execute(response, details)
+}
+
+func CreateSystemHandler(response http.ResponseWriter, request *http.Request) {
+	conn := pool.Get()
+	defer conn.Close()
+	timestamp, err := conn.Do("GET", "systemList")
 	if err != nil {
 		fmt.Fprintf(response, "Error retrieving value from redis: %s", err)
 	}
@@ -65,6 +96,7 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", DashboardHandler)
+	router.HandleFunc("/systems/create", CreateSystemHandler)
 
 	http.Handle("/", router)
 	http.ListenAndServe(":8080", nil)
