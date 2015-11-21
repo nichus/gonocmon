@@ -2,13 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"html/template"
-	"net/http"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/gorilla/mux"
 )
 
 var (
@@ -16,6 +13,7 @@ var (
 	redisAddress   = flag.String("redisAddress", ":6379", "Address to the redis server")
 	redisPassword  = flag.String("redisPassword", "", "Password for the redisAddress")
 	maxConnections = flag.Int("max-connections", 10, "Max connections to redis")
+	templates      *template.Template
 )
 
 func newPool(server, password string) *redis.Pool {
@@ -57,47 +55,14 @@ func retrieveValue(key string) (reply interface{}, err error) {
 	return value, err
 }
 
-func DashboardHandler(response http.ResponseWriter, request *http.Request) {
-	conn := pool.Get()
-	defer conn.Close()
-	timestamp, err := conn.Do("GET", "ap-srv1")
-	if err != nil {
-		fmt.Fprintf(response, "Error retrieving value from redis: %s", err)
-	}
-	details := struct {
-		Time string
-	}{
-		fmt.Sprintf("%s", timestamp),
-	}
-	t, _ := template.ParseFiles("templates/dashboard.html")
-	t.Execute(response, details)
-}
-
-func CreateSystemHandler(response http.ResponseWriter, request *http.Request) {
-	conn := pool.Get()
-	defer conn.Close()
-	timestamp, err := conn.Do("GET", "systemList")
-	if err != nil {
-		fmt.Fprintf(response, "Error retrieving value from redis: %s", err)
-	}
-	details := struct {
-		Time string
-	}{
-		fmt.Sprintf("%s", timestamp),
-	}
-	t, _ := template.ParseFiles("templates/dashboard.html")
-	t.Execute(response, details)
-}
-
 func main() {
+	var waitGroup WaitGroupWrapper
+
 	flag.Parse()
 	pool = newPool(*redisAddress, *redisPassword)
 	defer pool.Close()
 
-	router := mux.NewRouter()
-	router.HandleFunc("/", DashboardHandler)
-	router.HandleFunc("/systems/create", CreateSystemHandler)
+	waitGroup.Wrap(func() { httpServer() })
 
-	http.Handle("/", router)
-	http.ListenAndServe(":8080", nil)
+	waitGroup.Wait()
 }

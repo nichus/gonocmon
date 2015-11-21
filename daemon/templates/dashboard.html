@@ -1,8 +1,10 @@
+{{template "header.html"}}
 <h1>Dashboard</h1>
 
-<p><address>Last updated: {{.Time}}</address></p>
+<p><address>Last updated at {{.Time}}</address></p>
 
 <form method="post" action="/systems/create" autocomplete="off" >
 	<label for="new_system_name">Add a System: </label>
 	<input type="text" id="new_system_name" size="25"></input>
 </form>
+{{template "footer.html"}}

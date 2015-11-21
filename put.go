@@ -15,7 +15,7 @@ func get(c redis.Conn) {
 	log.Printf("get=%s", r)
 }
 func put(c redis.Conn) {
-	r, err := c.Do("SET", "ap-srv1", time.Now())
+	r, err := c.Do("SET", "ap-srv1", time.Now().UTC().Unix())
 
 	if err != nil {
 		log.Fatal(err)
@@ -30,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	get(c)
+	put(c)
 
 	defer c.Close()
 }
