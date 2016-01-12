@@ -65,7 +65,7 @@ func CreateSystemHandler(response http.ResponseWriter, request *http.Request) {
 func loadTemplates() {
 	var err error
 	t := template.New("gonocmon").Funcs(template.FuncMap{})
-	templates, err = t.ParseGlob("templates/*.html")
+	templates, err = t.ParseGlob(fmt.Sprintf("%s/*.html", templateDirectory))
 	if err != nil {
 		log.Printf("ERROR: %s", err.Error())
 	}

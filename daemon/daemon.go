@@ -3,42 +3,17 @@ package main
 import (
 	"flag"
 	"html/template"
-	"time"
 
 	"github.com/garyburd/redigo/redis"
 )
 
 var (
-	pool           *redis.Pool
-	redisAddress   = flag.String("redisAddress", ":6379", "Address to the redis server")
-	redisPassword  = flag.String("redisPassword", "", "Password for the redisAddress")
-	maxConnections = flag.Int("max-connections", 10, "Max connections to redis")
-	templates      *template.Template
+	pool                        *redis.Pool
+	templates                   *template.Template
+	templateDirectory           string
+	redisPassword, redisAddress string
+	redisMaxConn                int
 )
-
-func newPool(server, password string) *redis.Pool {
-	return &redis.Pool{
-		MaxIdle:     3,
-		IdleTimeout: 240 * time.Second,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", server)
-			if err != nil {
-				return nil, err
-			}
-			/*
-			 * if _, err := c.Do("AUTH", password); err != nil {
-			 * 	c.Close()
-			 * 	return nil, err
-			 * }
-			 */
-			return c, err
-		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-	}
-}
 
 func retrieveValue(key string) (reply interface{}, err error) {
 	conn := pool.Get()
@@ -55,11 +30,21 @@ func retrieveValue(key string) (reply interface{}, err error) {
 	return value, err
 }
 
+func init() {
+	flag.StringVar(&redisPassword, "redisPassword", "", "Password used to connect to redisAddress")
+	flag.StringVar(&redisAddress, "redisAddress", ":6379", "Address to the redis server")
+	flag.IntVar(&redisMaxConn, "max-connections", 10, "Max connections to redis")
+	flag.StringVar(&templateDirectory, "templateDirectory", "/home/ovandenb/gnm-templates", "Path to directory containing the html templates")
+
+	flag.Parse()
+	return
+}
+
 func main() {
 	var waitGroup WaitGroupWrapper
 
 	flag.Parse()
-	pool = newPool(*redisAddress, *redisPassword)
+	pool = newPool(redisAddress, redisPassword)
 	defer pool.Close()
 
 	waitGroup.Wrap(func() { httpServer() })
